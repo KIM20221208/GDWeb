@@ -1,14 +1,13 @@
 from django.urls import path
 
-from host.views import listorders
-from host.views import listcustomers
-from host.views import listcustomerByPhoneNum
+from host import views
 
 # Router patterns: URLとcallされる関数のbind。
 urlpatterns = [
     # My binds:
-    path('orders/', listorders),
-    path('customers/', listcustomers),
-    path('customerByPhoneNum/', listcustomerByPhoneNum),
+    path('orders/', views.listorders),
+    path('customers/', views.listcustomers),
+    path('customerByPhoneNum/', views.listcustomerByPhoneNum),
+    # path('crawlSteamUserBySteamID/', views.list_user_by_steam_id),
 
 ]

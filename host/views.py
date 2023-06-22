@@ -49,3 +49,12 @@ def listcustomerByPhoneNum(request):
         retStr += '<br>'
 
     return HttpResponse(retStr)
+
+
+# def list_user_by_steam_id(request):
+#     # 检查url中是否含有参数steamid
+#     steam_ID = request.GET.get('steamid', None)
+#     if steam_ID:
+#
+#
+#     return HttpResponse()
