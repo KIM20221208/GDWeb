@@ -26,7 +26,7 @@ admin.site.register(Customer)
 class SteamUser(models.Model):
     # TODO: Optimize 'max_length'.
     # Rank of the game.
-    rank = models.IntegerField(max_length=100, blank=True)
+    rank = models.IntegerField(blank=True)
     # User ID
     steam_ID = models.CharField(max_length=17)
     #
@@ -38,21 +38,21 @@ class SteamUser(models.Model):
     #
     status_U_count = models.FloatField(max_length=2, blank=True)
     #
-    level = models.IntegerField(max_length=1000, blank=True)
+    level = models.IntegerField(blank=True)
     #
-    badges = models.IntegerField(max_length=1000, blank=True)
+    badges = models.IntegerField(blank=True)
     #
-    games = models.IntegerField(max_length=10000, blank=True)
+    games = models.IntegerField(blank=True)
     #
-    friends = models.IntegerField(max_length=10000, blank=True)
+    friends = models.IntegerField(blank=True)
     #
-    groups = models.IntegerField(max_length=1000, blank=True)
+    groups = models.IntegerField(blank=True)
     #
-    screenshots = models.IntegerField(max_length=10000, blank=True)
+    screenshots = models.IntegerField(blank=True)
     #
-    Reviews = models.IntegerField(max_length=10000, blank=True)
+    Reviews = models.IntegerField(blank=True)
     #
-    Cluster = models.IntegerField(max_length=5, blank=True)
+    Cluster = models.IntegerField(blank=True)
     #
     R = models.FloatField(max_length=10, blank=True)
 
