@@ -599,7 +599,7 @@ if __name__ == "__main__":
     R = 0.3
 
     timeStart = time.time()  # 用来计算下列循环所用事件，开始
-    path = "C:/Users/JCY/repositories/GDWeb/host"
+    path = "/host"
     game = Game(game_title, app_id, path)  # 声明Game对象
     l_data = list()  # 用来装用户数据
     user = User(steam_ID_from_remote, last_two_weeks, hours, recent_play)
