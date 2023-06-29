@@ -7,6 +7,10 @@ import time
 
 import requests
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from selenium.webdriver import Chrome
+from selenium.webdriver import ChromeOptions
+from selenium.webdriver.chrome import service
 
 # 英文月份转换数字用字典
 monthTransDic = {
@@ -26,45 +30,122 @@ monthTransDic = {
 
 
 # 拿到秒数， 返回hour, minute, second
-def timeParser(sec):
+def time_parser(sec):
     hour = int(sec / 3600)
     minute = int((sec - hour * 3600) / 60)
     second = int(sec - (hour * 60 + minute) * 60)
-    hourMinuteSecond = str(hour) + ':' + str(minute) + ':' + str(second)
-    return hourMinuteSecond
+    hour_minute_second = str(hour) + ':' + str(minute) + ':' + str(second)
+    return hour_minute_second
 
 
 # 将12小时表示的时间转换为24小时，
-def timeTrans(clock_12):
-    """ clock_12 = "XX:XXam/pm"
-        clock_24 = "XX:XX" """
+def time_trans(clock_12):
+    """
+    clock_12 = "XX:XXam/pm"
+    clock_24 = "XX:XX"
+    """
     if clock_12.find("pm") != -1:
-        clock_24 = str(int(clock_12.split(':')[0]) + 12) + ':' + clock_12.split(':')[1].strip("pm")
+        clock_24 = str(int(clock_12.split(':')[0]) + 12) + \
+            ':' + \
+            clock_12.split(':')[1].strip("pm")
     else:
         clock_24 = clock_12.strip("am")
 
     return clock_24
 
 
+def is_played(web_el):
+    return web_el.find_element(by=By.XPATH, value="./div/div[1]/span")
+
+
 class User:
-    # 初始化
-    def __init__(self, steamId, hours, lastTwoWeeks, lastPlayed):
-        self.steamId = steamId
-        self.hours = round(float(hours), 2)
-        self.lastTwoWeeks = round(float(lastTwoWeeks), 2)
-        self.lasPlayed, self.lastPlayedYear = self.newLastPlayed(lastPlayed)
-        self.profileURL = "https://steamcommunity.com/profiles/" + steamId
-        self.profileResp, self.profilePage = self.getProfilePage()
+    # Constructor.
+    def __init__(self, steam_ID, hours, last_two_weeks, last_played):
+        self.steamId = steam_ID
+        self.hours = round(float(hours), 2) if hours else -1
+        self.lastTwoWeeks = round(float(last_two_weeks), 2) if last_two_weeks else -1
+        self.lasPlayed, self.lastPlayedYear = self.newLastPlayed(last_played)
+        self.profileURL = "https://steamcommunity.com/profiles/" + steam_ID
+        # profilePage: Parsed profile responsibility
+        self.profileResp, \
+            self.profilePage = self.getProfilePage()
         self.nationality = self.getNationality()
         self.level = self.getLevel()
         self.badges, self.games, self.friends, self.groups, self.screenshots, self.recommended = self.getRightCol
         self.ifDisorder = self.checkIfDisorder()
+        self.l_own_games = list()
 
     # 返回类的成员变量
     def getMember(self):
         return self.steamId, self.hours, self.lastTwoWeeks, self.lasPlayed, self.lastPlayedYear, self.nationality, \
                self.level, self.badges, self.games, self.friends, self.groups, self.screenshots, self.recommended, \
                self.ifDisorder
+
+    def crawl_last_tow_hours(self):
+        last_two_weeks_div = self.profilePage.find("div", class_="recentgame_quicklinks recentgame_recentplaytime").find("h2").text
+        # The format of last_two_weeks_div will be like "50.1 hours past 2 weeks".
+        self.lastTwoWeeks = round(float(last_two_weeks_div.split()[0]), 2)
+        return self.lastTwoWeeks
+
+    def crawl_own_game(self):
+        my_ID = "TequilaSunrise44"
+        my_password = "Jcy.951124"
+        steam_ID = self.steamId
+
+        my_options = ChromeOptions()
+        my_options.add_experimental_option("detach", True)
+        my_options.add_argument('lang=en_US')
+        my_options.add_argument("--start-maximized")
+
+        chrome_driver_path = r"C:\Users\JCY\AppData\Local\Programs\Python\Python310\chromedriver.exe"
+        my_service = service.Service(executable_path=chrome_driver_path)
+
+        web = Chrome(options=my_options, service=my_service)
+        web.implicitly_wait(15)
+        web.get(f"https://steamcommunity.com/profiles/{steam_ID}/games?tab=all")
+
+        ID_input = web.find_element(by=By.XPATH,
+                                  value="//*[@id=\"responsive_page_template_content\"]/div[1]/div[1]/div/div/div/div[2]/div/form/div[1]/input")
+        ID_input.send_keys(my_ID)
+
+        password_input = web.find_element(by=By.XPATH,
+                                        value="//*[@id=\"responsive_page_template_content\"]/div/div[1]/div/div/div/div[2]/div/form/div[2]/input")
+        password_input .send_keys(my_password)
+
+        sign_in_button = web.find_element(by=By.XPATH,
+                                          value="//*[@id=\"responsive_page_template_content\"]/div/div[1]/div/div/div/div[2]/div/form/div[4]/button")
+        sign_in_button.click()
+
+        game_list = web.find_elements(by=By.XPATH,
+                                      value="//*[@id=\"responsive_page_template_content\"]/div[3]/div/div[5]/div")
+        catch_not_played = False
+        if game_list:
+            for item in game_list:
+                d_tmp = dict()
+                a_game = item.find_element(by=By.CLASS_NAME, value="gameslistitems_GameName_22awl")
+                app_ID = a_game.get_attribute(name="href").split('/')[-1]
+                game_name = a_game.text
+                if not catch_not_played:
+                    try:
+                        is_played(item)
+                    except Exception as err:
+                        print(str(err))
+                        total_played = -1
+                        catch_not_played = True
+                    else:
+                        total_played_split = is_played(item).text.split()
+                        total_played = total_played_split[2] + total_played_split[3]
+                else:
+                    total_played = -1
+
+                d_tmp["appID"] = app_ID
+                d_tmp["gameName"] = game_name
+                d_tmp["totalPlayed"] = total_played
+                self.l_own_games.append(d_tmp)
+        else:
+            print("game_list got failed")
+
+        return self.l_own_games
 
     # lastPlayed的"d-m-y"日期格式改为"y/m/d"
     @staticmethod
@@ -106,8 +187,7 @@ class User:
     # level
     def getLevel(self):
         """
-        :param: parsed profile Responsibility
-        :return: User level or "No Data"
+        return: User level or "No Data"
         """
         levelSpan = self.profilePage.find("span", class_="friendPlayerLevelNum")
         if levelSpan:
@@ -197,13 +277,13 @@ class User:
                             unlockTime = unlockTimeFormat[1].strip(" ") + '/' + \
                                          monthTransDic[unlockTimeFormat[0].split(" ")[1]] + '/' + \
                                          unlockTimeFormat[0].split(" ")[0] + ' ' + \
-                                         timeTrans(unlockTime[1].strip())
+                                         time_trans(unlockTime[1].strip())
                         else:  # 如果是本年度解锁的评论，则需要加上年份
                             today = datetime.datetime.today()
                             unlockTime = str(today.year) + '/' + \
                                          monthTransDic[unlockTimeFormat[0].split(" ")[1]] + '/' + \
                                          unlockTimeFormat[0].split(" ")[0] + ' ' + \
-                                         timeTrans(unlockTime[1].strip())
+                                         time_trans(unlockTime[1].strip())
                     # 按照日期判断星期，是否为工作日。如果有日期，则取得星期数
                     if unlockTime != "Locked":
                         time_split = unlockTime.split(' ')[0].split('/')
@@ -588,7 +668,8 @@ def GameFileReader(d_Type, directory):
 
 
 if __name__ == "__main__":
-    steam_ID_from_remote = "76561198197491294"
+
+    steam_ID_from_remote = "76561199123336294"
     rank = "15"
     game_title = "Cyberpunk_2077"
     app_id = "1091500"
@@ -603,6 +684,9 @@ if __name__ == "__main__":
     game = Game(game_title, app_id, path)  # 声明Game对象
     l_data = list()  # 用来装用户数据
     user = User(steam_ID_from_remote, last_two_weeks, hours, recent_play)
+
+    print(user.crawl_own_game())
+
     d_UserAchievements = user.getAchievements(app_id, game.d_NormalizedGlobalAchievements)
 
     for k, v in d_UserAchievements.items():  # k是成就名，v列表中保存的依次是：score, unlockDate, unlockYear, week, status
@@ -637,4 +721,4 @@ if __name__ == "__main__":
     print(l_user_last[0])
 
     timeEnd = time.time()  # 用来计算下列循环所用事件，结束
-    print("program completed! cost:", timeParser(timeEnd - timeStart))
+    print("program completed! cost:", time_parser(timeEnd - timeStart))

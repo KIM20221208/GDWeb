@@ -8,6 +8,7 @@ urlpatterns = [
     path('orders/', views.listorders),
     path('customers/', views.listcustomers),
     path('customerByPhoneNum/', views.listcustomerByPhoneNum),
-    path('crawlSteamUserBySteamID/', views.list_user_by_steam_id),
+    path('crawlSteamUserBySteamID/', views.list_user_by_steam_ID),
+    path('crawOwnGamesBySteamID/', views.list_own_games_by_steam_ID)
 
 ]

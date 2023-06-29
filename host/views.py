@@ -1,10 +1,10 @@
+import csv
 import time
 from enum import IntEnum, unique
 from django.http import HttpResponse
 
 from common.models import Customer, SteamUser
 from host.Crawling import Util_cluster
-
 
 @unique
 class EUserParam(IntEnum):
@@ -68,7 +68,7 @@ def listcustomerByPhoneNum(request):
     return HttpResponse(retStr)
 
 
-def list_user_by_steam_id(request):
+def list_user_by_steam_ID(request):
     # 检查url中是否含有参数steamid
     steam_ID_from_remote = request.GET.get('steamID', None)
     ret_set = str()
@@ -123,7 +123,7 @@ def list_user_by_steam_id(request):
         l_user_last = Util_cluster.Selecting(Util_cluster.Cleaning(l_user))
 
         timeEnd = time.time()  # 用来计算下列循环所用事件，结束
-        print("program completed! cost:", Util_cluster.timeParser(timeEnd - timeStart))
+        print("program completed! cost:", Util_cluster.time_parser(timeEnd - timeStart))
 
         record = SteamUser.objects.create(rank=rank,
                                  steam_ID=steam_ID_from_remote,
@@ -144,5 +144,39 @@ def list_user_by_steam_id(request):
         ret_set = f"<div>Crawling done.</div><h2>The user {steam_ID_from_remote}'s profile params are:</h2><table border=1, cellspacing=0, width=300>"
         for index, value in enumerate(l_user_last[0]):
             ret_set += f"<tr><td>{EUserParam(index).name}:</td><td>{value}</td></tr>"
+
+    return HttpResponse(ret_set)
+
+
+def list_own_games_by_steam_ID(request):
+    steam_ID_from_remote = request.GET.get('steamID', None)
+    ret_set = str()
+    # TODO: Fix random input: recent_play.
+    recent_play = "2-4-22"
+    if steam_ID_from_remote:
+        c_user = Util_cluster.User(steam_ID_from_remote, None, None, recent_play)
+        c_user.crawl_last_tow_hours()
+        c_user.crawl_own_game()
+        c_user.closeProfileResp()
+
+        with open("C:/Users/JCY/repositories/GDWeb/host/Crawling/gameDisorderRank.csv", mode='r', encoding="utf-8", newline='') as file:
+            csv_reader = csv.reader(file)
+            # 0: rank, 1: Game name, 2: appID, 3: GD rank
+            l_game_disorder_rank = list(csv_reader)
+
+        ret_set = f"<div>Crawling done.</div><h2>The user {steam_ID_from_remote}'s own games are:</h2><table border=1, cellspacing=0, width=1000>" + \
+                  "<thead><tr><th>Game Name</th><th>Your Total Play Time</th><th>Game-Disorder Rank</th></tr></thead><tbody>"
+        for _, d_value in enumerate(c_user.l_own_games):
+            GD_rank = -1
+            for value in l_game_disorder_rank:
+                if value[2] == d_value.get('appID'):
+                    GD_rank = value[3]
+            ret_set += "<tr>"
+            # https://cdn.cloudflare.steamstatic.com/steam/apps/1184370/header.jpg
+            ret_set += f"<td align=center><img src=\"https://cdn.cloudflare.steamstatic.com/steam/apps/{d_value.get('appID')}/header.jpg\" /><br />{d_value.get('gameName')}</td>" + \
+                f"<td align=center>{d_value.get('totalPlayed')}</td>" + \
+                f"<td align=center>{GD_rank}</td>"
+            ret_set += "</tr>"
+        ret_set += "</tbody></table>"
 
     return HttpResponse(ret_set)
